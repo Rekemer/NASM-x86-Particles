@@ -143,7 +143,7 @@ START:
     call MessageBoxA
     
     ; Oops!
-    jmp exit
+    ;jmp exit
 
 Lcreate:
 	; Call the 'CreateWindowExA' function to create the main window
@@ -177,7 +177,7 @@ Lcreate:
     ; -- every time user moves mouse or imput some msg this loop is activated
 	; -- in order to get all messages imputed by the user 
 messloop:
-    
+
 	push PM_REMOVE
 	push 0
 	push 0

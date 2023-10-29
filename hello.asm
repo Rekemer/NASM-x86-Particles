@@ -13,24 +13,69 @@
 ; think of a label as a pointer to the data and the square brackets dereferences
 ; the pointer just as the asterisk does in C.
 
-%include "WIN32N.INC"
+;%include "WIN32N.INC"
                              
-    COLOR_WINDOW        EQU 5                       ; Constants
-    CS_BYTEALIGNWINDOW  EQU 2000h
-    CS_HREDRAW          EQU 2
-    CS_VREDRAW          EQU 1
-    CW_USEDEFAULT       EQU 80000000h
-    IDC_ARROW           EQU 7F00h
-    IDI_APPLICATION     EQU 7F00h
-    IMAGE_CURSOR        EQU 2
-    IMAGE_ICON          EQU 1
-    LR_SHARED           EQU 8000h
-    NULL                EQU 0
-    SW_SHOWNORMAL       EQU 1
-    WM_DESTROY          EQU 2
-    WS_EX_COMPOSITED    EQU 2000000h
-    WS_OVERLAPPEDWINDOW EQU 0CF0000h
+%define WS_OVERLAPPED       0x00000000
+%define WS_POPUP            0x80000000
+%define WS_CHILD            0x40000000
+%define WS_MINIMIZE         0x20000000
+%define WS_VISIBLE          0x10000000
+%define WS_DISABLED         0x08000000
+%define WS_CLIPSIBLINGS     0x04000000
+%define WS_CLIPCHILDREN     0x02000000
+%define WS_MAXIMIZE         0x01000000
+%define WS_CAPTION          0x00C00000
+%define WS_BORDER           0x00800000
+%define WS_DLGFRAME         0x00400000
+%define WS_VSCROLL          0x00200000
+%define WS_HSCROLL          0x00100000
+%define WS_SYSMENU          0x00080000
+%define WS_THICKFRAME       0x00040000
+%define WS_GROUP            0x00020000
+%define WS_TABSTOP          0x00010000
 
+%define WS_MINIMIZEBOX      0x00020000
+%define WS_MAXIMIZEBOX      0x00010000
+
+%define WS_TILED            WS_OVERLAPPED
+%define WS_ICONIC           WS_MINIMIZE
+%define WS_SIZEBOX          WS_THICKFRAME
+%define WS_TILEDWINDOW      WS_OVERLAPPEDWINDOW
+
+; Common Window Styles 
+
+%define WS_OVERLAPPEDWINDOW (WS_OVERLAPPED     | \
+							 WS_CAPTION        | \
+							 WS_SYSMENU        | \
+							 WS_THICKFRAME     | \
+							 WS_MINIMIZEBOX    | \
+							 WS_MAXIMIZEBOX)
+                             
+%define PM_REMOVE 1h
+
+%define WM_QUIT                         0x0012
+%define WM_PAINT                        0x000F
+%define WM_CLOSE                        0x0010
+
+; Class styles 
+
+%define CS_VREDRAW          0x0001
+%define CS_HREDRAW          0x0002
+%define CS_DBLCLKS          0x0008
+%define CS_OWNDC            0x0020
+%define CS_CLASSDC          0x0040
+%define CS_PARENTDC         0x0080
+%define CS_NOCLOSE          0x0200
+%define CS_SAVEBITS         0x0800
+%define CS_BYTEALIGNCLIENT  0x1000
+%define CS_BYTEALIGNWINDOW  0x2000
+%define CS_GLOBALCLASS      0x4000
+
+; Standard Icon IDs 
+
+%define IDI_APPLICATION     32512
+%define IDC_ARROW 32512
+                           
     extern CreateWindowExA                          ; Import external symbols
     extern DefWindowProcA                           ; Windows API functions, not decorated
     extern DispatchMessageA
@@ -43,6 +88,7 @@
     extern RegisterClassExA
     extern LoadIconA
     extern LoadCursorA
+    extern PeekMessageA
     extern ShowWindow
     extern TranslateMessage
     extern UpdateWindow
@@ -66,13 +112,14 @@ section .text
 global  _main
 extern  _printf
 _main:
-    sub esp, 8
-    sub esp, 32
-    xor ecx,ecx
+    ;sub esp, 8
+    ;sub esp, 32
+    ;xor ecx,ecx
+    push 0
     call [GetModuleHandleA]
     mov [hInstance], eax
-    add esp, 32
-    add esp, 8
+    ;add esp, 32
+    ;add esp, 8
 
     
     
@@ -94,15 +141,16 @@ _main:
     call LoadCursorA
     mov dword[OurWindowclass+28], eax ; .hCursor
 
-    mov dword[OurWindowclass+32], 0 ; .hbrBackground, 5 is COLOR_WINDOW
-    mov dword[OurWindowclass+36], 5 ; .lpszMenuName
-    mov dword[OurWindowclass+40], "a" ; .lpszClassName
-    mov dword[OurWindowclass+44], 0 ; .lpszClassName
+    mov dword[OurWindowclass+32], 5 ; .hbrBackground, 5 is COLOR_WINDOW
+    mov dword[OurWindowclass+36], 0 ; .lpszMenuName
+    mov dword[OurWindowclass+40], Windowclassname ; .lpszClassName
+    mov dword[OurWindowclass+44], 0 ; ..hIconSm
     lea eax, [OurWindowclass]
     push eax
     call RegisterClassExA
-    add esp, 4
-   
+    
+    ;add esp, 4
+    
     ;mov eax, dword[Instance]
 
     push 0
@@ -115,30 +163,80 @@ _main:
     push 360    ;  Left
     push WS_VISIBLE+WS_OVERLAPPEDWINDOW ; Style
     push WindowName
-    push ClassName
+    push Windowclassname
     push 0        ; Extended style
     call CreateWindowExA
-    mov dword[Windowhandle], eax
     
     
-    push 69
-    call ExitProcess 
+    mov dword[WindowHandle], eax
+    push 1 
+    push dword[WindowHandle]
+    call ShowWindow
+    push dword[WindowHandle]
+    call UpdateWindow  
 
-    ret
-CreateWindow: 
+messloop:
     
+	push PM_REMOVE
+	push 0
+	push 0
+	push 0
+	push MessageBuffer
+	call PeekMessageA
+    
+    ; See if the return value is zero
+    cmp eax, 0
+    je nextloop
+        
+    ; If the 'message' is WM_QUIT then we have to QUIT!
+    cmp dword[MessageBuffer+4], WM_QUIT
+    je exit
+    
+    push MessageBuffer
+    call TranslateMessage
+    
+    push MessageBuffer
+	call DispatchMessageA
+    
+nextloop:
+    jmp near messloop
+
+exit:
+    push dword 0
+    call ExitProcess
+
+	ret
+
+global WindowProc
 WindowProc:
     push ebp
     mov ebp, esp
+    cmp dword[ebp+12], WM_CLOSE
+    jne Ldefault
+    push 0 
+    call PostQuitMessage
+    
+    push 22
+    call ExitProcess
+    ; mov esp, ebp
+    ; pop ebp
+    ; ret
+
+Ldefault:
+	push dword[ebp+20]	; LPARAM
+    push dword[ebp+16]	; WPARAM
+    push dword[ebp+12]	; Msg
+    push dword[ebp+8]	; hWnd
+	call DefWindowProcA
 
     mov esp, ebp
     pop ebp
-    ret
-    
+	ret
+
 section .data  ; initialized and constant data 
     number: dd 22
     number2: dd 5
-
+    Windowclassname db "MyClass", 0
     WindowName  db "Basic Window 64", 0
     ClassName   db "Window", 0
 
@@ -151,5 +249,6 @@ message:
 section .bss
      alignb 8
      hInstance resb 4
+     MessageBuffer resb 28
      OurWindowclass resb 48
-     Windowhandle resb 4
+     WindowHandle resb 4
