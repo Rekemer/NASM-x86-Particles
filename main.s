@@ -28,10 +28,8 @@ _a:
 	.align 4
 _b:
 	.long	4
+	.comm	_k, 4, 2
 	.def	___main;	.scl	2;	.type	32;	.endef
-	.section .rdata,"dr"
-LC0:
-	.ascii "%i\0"
 	.text
 	.globl	_main
 	.def	_main;	.scl	2;	.type	32;	.endef
@@ -44,16 +42,8 @@ LFB11:
 	movl	%esp, %ebp
 	.cfi_def_cfa_register 5
 	andl	$-16, %esp
-	subl	$16, %esp
 	call	___main
-	movl	_b, %edx
-	movl	_a, %eax
-	movl	%edx, 4(%esp)
-	movl	%eax, (%esp)
-	call	_sum
-	movl	$2, 4(%esp)
-	movl	$LC0, (%esp)
-	call	_printf
+	movl	$22, _k
 	movl	$0, %eax
 	leave
 	.cfi_restore 5
@@ -62,4 +52,3 @@ LFB11:
 	.cfi_endproc
 LFE11:
 	.ident	"GCC: (MinGW.org GCC-6.3.0-1) 6.3.0"
-	.def	_printf;	.scl	2;	.type	32;	.endef

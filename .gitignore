@@ -1,2 +1,4 @@
-*.exe
+main.exe
+hello.exe
 *.obj
+*.gif
