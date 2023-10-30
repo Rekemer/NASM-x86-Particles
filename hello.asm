@@ -13,68 +13,68 @@
 ; think of a label as a pointer to the data and the square brackets dereferences
 ; the pointer just as the asterisk does in C.
 
-;%include "WIN32N.INC"
+%include "WIN32N.INC"
                              
-%define WS_OVERLAPPED       0x00000000
-%define WS_POPUP            0x80000000
-%define WS_CHILD            0x40000000
-%define WS_MINIMIZE         0x20000000
-%define WS_VISIBLE          0x10000000
-%define WS_DISABLED         0x08000000
-%define WS_CLIPSIBLINGS     0x04000000
-%define WS_CLIPCHILDREN     0x02000000
-%define WS_MAXIMIZE         0x01000000
-%define WS_CAPTION          0x00C00000
-%define WS_BORDER           0x00800000
-%define WS_DLGFRAME         0x00400000
-%define WS_VSCROLL          0x00200000
-%define WS_HSCROLL          0x00100000
-%define WS_SYSMENU          0x00080000
-%define WS_THICKFRAME       0x00040000
-%define WS_GROUP            0x00020000
-%define WS_TABSTOP          0x00010000
+; %define WS_OVERLAPPED       0x00000000
+; %define WS_POPUP            0x80000000
+; %define WS_CHILD            0x40000000
+; %define WS_MINIMIZE         0x20000000
+; %define WS_VISIBLE          0x10000000
+; %define WS_DISABLED         0x08000000
+; %define WS_CLIPSIBLINGS     0x04000000
+; %define WS_CLIPCHILDREN     0x02000000
+; %define WS_MAXIMIZE         0x01000000
+; %define WS_CAPTION          0x00C00000
+; %define WS_BORDER           0x00800000
+; %define WS_DLGFRAME         0x00400000
+; %define WS_VSCROLL          0x00200000
+; %define WS_HSCROLL          0x00100000
+; %define WS_SYSMENU          0x00080000
+; %define WS_THICKFRAME       0x00040000
+; %define WS_GROUP            0x00020000
+; %define WS_TABSTOP          0x00010000
 
-%define WS_MINIMIZEBOX      0x00020000
-%define WS_MAXIMIZEBOX      0x00010000
+; %define WS_MINIMIZEBOX      0x00020000
+; %define WS_MAXIMIZEBOX      0x00010000
 
-%define WS_TILED            WS_OVERLAPPED
-%define WS_ICONIC           WS_MINIMIZE
-%define WS_SIZEBOX          WS_THICKFRAME
-%define WS_TILEDWINDOW      WS_OVERLAPPEDWINDOW
+; %define WS_TILED            WS_OVERLAPPED
+; %define WS_ICONIC           WS_MINIMIZE
+; %define WS_SIZEBOX          WS_THICKFRAME
+; %define WS_TILEDWINDOW      WS_OVERLAPPEDWINDOW
 
 ; Common Window Styles 
 
-%define WS_OVERLAPPEDWINDOW (WS_OVERLAPPED     | \
-							 WS_CAPTION        | \
-							 WS_SYSMENU        | \
-							 WS_THICKFRAME     | \
-							 WS_MINIMIZEBOX    | \
-							 WS_MAXIMIZEBOX)
+; %define WS_OVERLAPPEDWINDOW (WS_OVERLAPPED     | \
+; 							 WS_CAPTION        | \
+; 							 WS_SYSMENU        | \
+; 							 WS_THICKFRAME     | \
+; 							 WS_MINIMIZEBOX    | \
+; 							 WS_MAXIMIZEBOX)
                              
-%define PM_REMOVE 1h
+; %define PM_REMOVE 1h
 
-%define WM_QUIT                         0x0012
-%define WM_PAINT                        0x000F
-%define WM_CLOSE                        0x0010
+; %define WM_QUIT                         0x0012
+; %define WM_PAINT                        0x000F
+; %define WM_CLOSE                        0x0010
 
-; Class styles 
+; ; Class styles 
 
-%define CS_VREDRAW          0x0001
-%define CS_HREDRAW          0x0002
-%define CS_DBLCLKS          0x0008
-%define CS_OWNDC            0x0020
-%define CS_CLASSDC          0x0040
-%define CS_PARENTDC         0x0080
-%define CS_NOCLOSE          0x0200
-%define CS_SAVEBITS         0x0800
-%define CS_BYTEALIGNCLIENT  0x1000
-%define CS_BYTEALIGNWINDOW  0x2000
-%define CS_GLOBALCLASS      0x4000
+; %define CS_VREDRAW          0x0001
+; %define CS_HREDRAW          0x0002
+; %define CS_DBLCLKS          0x0008
+; %define CS_OWNDC            0x0020
+; %define CS_CLASSDC          0x0040
+; %define CS_PARENTDC         0x0080
+; %define CS_NOCLOSE          0x0200
+; %define CS_SAVEBITS         0x0800
+; %define CS_BYTEALIGNCLIENT  0x1000
+; %define CS_BYTEALIGNWINDOW  0x2000
+; %define CS_GLOBALCLASS      0x4000
 
-; Standard Icon IDs 
+; ; Standard Icon IDs 
 
-%define IDI_APPLICATION     32512
-%define IDC_ARROW 32512
+; %define IDI_APPLICATION     32512
+; %define IDC_ARROW 32512
                            
     extern CreateWindowExA                          ; Import external symbols
     extern DefWindowProcA                           ; Windows API functions, not decorated
@@ -93,6 +93,8 @@
     extern TranslateMessage
     extern UpdateWindow
     extern AllocConsole 
+    extern WriteConsoleA
+    extern GetStdHandle 
     
     ; import AllocConsole kernel32.dll
     ; import GetModuleHandleA kernel32.dll
@@ -111,6 +113,8 @@ section .text
     ret
 global  _main
 extern  _printf
+StringLength:
+
 _main:
     ;sub esp, 8
     ;sub esp, 32
@@ -175,8 +179,26 @@ _main:
     push dword[WindowHandle]
     call UpdateWindow  
 
+    push STD_OUTPUT_HANDLE
+    call GetStdHandle
+    mov [outHandle], eax
+
+    push 0
+    sub esp, 32
+    lea eax, [esp-32]
+    push eax
+    push 7
+    push ClassName
+    push dword [outHandle]
+    call WriteConsoleA 
+    push eax
+    call ExitProcess 
+
 messloop:
     
+
+
+
 	push PM_REMOVE
 	push 0
 	push 0
@@ -249,6 +271,7 @@ message:
 section .bss
      alignb 8
      hInstance resb 4
+     outHandle resb 4
      MessageBuffer resb 28
      OurWindowclass resb 48
      WindowHandle resb 4
