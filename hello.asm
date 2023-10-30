@@ -14,67 +14,7 @@
 ; the pointer just as the asterisk does in C.
 
 %include "WIN32N.INC"
-                             
-; %define WS_OVERLAPPED       0x00000000
-; %define WS_POPUP            0x80000000
-; %define WS_CHILD            0x40000000
-; %define WS_MINIMIZE         0x20000000
-; %define WS_VISIBLE          0x10000000
-; %define WS_DISABLED         0x08000000
-; %define WS_CLIPSIBLINGS     0x04000000
-; %define WS_CLIPCHILDREN     0x02000000
-; %define WS_MAXIMIZE         0x01000000
-; %define WS_CAPTION          0x00C00000
-; %define WS_BORDER           0x00800000
-; %define WS_DLGFRAME         0x00400000
-; %define WS_VSCROLL          0x00200000
-; %define WS_HSCROLL          0x00100000
-; %define WS_SYSMENU          0x00080000
-; %define WS_THICKFRAME       0x00040000
-; %define WS_GROUP            0x00020000
-; %define WS_TABSTOP          0x00010000
 
-; %define WS_MINIMIZEBOX      0x00020000
-; %define WS_MAXIMIZEBOX      0x00010000
-
-; %define WS_TILED            WS_OVERLAPPED
-; %define WS_ICONIC           WS_MINIMIZE
-; %define WS_SIZEBOX          WS_THICKFRAME
-; %define WS_TILEDWINDOW      WS_OVERLAPPEDWINDOW
-
-; Common Window Styles 
-
-; %define WS_OVERLAPPEDWINDOW (WS_OVERLAPPED     | \
-; 							 WS_CAPTION        | \
-; 							 WS_SYSMENU        | \
-; 							 WS_THICKFRAME     | \
-; 							 WS_MINIMIZEBOX    | \
-; 							 WS_MAXIMIZEBOX)
-                             
-; %define PM_REMOVE 1h
-
-; %define WM_QUIT                         0x0012
-; %define WM_PAINT                        0x000F
-; %define WM_CLOSE                        0x0010
-
-; ; Class styles 
-
-; %define CS_VREDRAW          0x0001
-; %define CS_HREDRAW          0x0002
-; %define CS_DBLCLKS          0x0008
-; %define CS_OWNDC            0x0020
-; %define CS_CLASSDC          0x0040
-; %define CS_PARENTDC         0x0080
-; %define CS_NOCLOSE          0x0200
-; %define CS_SAVEBITS         0x0800
-; %define CS_BYTEALIGNCLIENT  0x1000
-; %define CS_BYTEALIGNWINDOW  0x2000
-; %define CS_GLOBALCLASS      0x4000
-
-; ; Standard Icon IDs 
-
-; %define IDI_APPLICATION     32512
-; %define IDC_ARROW 32512
                            
     extern CreateWindowExA                          ; Import external symbols
     extern DefWindowProcA                           ; Windows API functions, not decorated
@@ -95,6 +35,8 @@
     extern AllocConsole 
     extern WriteConsoleA
     extern GetStdHandle 
+    extern GetCursorPos 
+    extern WriteFile 
     
     ; import AllocConsole kernel32.dll
     ; import GetModuleHandleA kernel32.dll
@@ -113,7 +55,79 @@ section .text
     ret
 global  _main
 extern  _printf
+
+;repne scasb: The repne prefix is used to repeat the scasb instruction.
+; It keeps executing scasb until the null terminator (0x00) is found.
+;  The scasb instruction compares the byte at the memory location pointed to by EDI with the value in AL (which is 0x00).
+;   If they are not equal, it increments EDI (since the direction flag is cleared) and decrements ECX. 
+;This process continues until the null terminator is found.
+
 StringLength:
+    mov edi,ecx
+
+    xor eax,eax		; Set the value that scasb will search for. In this case it is zero (the null terminator byte)
+    mov ecx,-1		; Store -1 in rcx so that scasb runs forever (or until it finds a null terminator). scasb DECREMENTS rcx each iteration
+    cld			; Clear the direction flag so scasb iterates forward through the input string
+
+    repne scasb		; Execute the scasb instruction. This leaves rdi pointing at the base of the null terminator.
+
+    not ecx		; Invert the value of rcx so that we get the two's complement value of the count. E.g, a count of -25 results in 24.
+    mov eax,ecx		; Move the length of the string into rax
+
+    ret
+itoa:
+    push ebp		
+    mov ebp,esp
+    sub esp,8		; Align the stack to 16 bytes (8 for return address + another 8 = 16)
+
+    mov eax,ecx		; Move the passed in argument to rax
+    lea edi,[numbuf+13]	; load the end address of the buffer (past the very end)
+    mov ecx,10		; divisor
+    mov dword [ebp-8],0	; rbp-8 will contain 8 bytes representing the length of the string - start at zero
+.divloop:
+    xor edx, edx      ; Zero out edx (where our remainder goes after idiv)
+    idiv ecx          ; Divide eax (the number) by 10 (the remainder is placed in edx)
+    add dl, 0x30      ; Add 0x30 to the remainder so we get the correct ASCII value
+    dec edi           ; Move the pointer backwards in the buffer
+    mov byte [edi], dl ; Move the character into the buffer
+    inc dword [ebp-8]  ; Increase the length
+
+    cmp eax, 0        ; Was the result zero?
+    jnz .divloop      ; No it wasn't, keep looping
+
+    mov eax, edi      ; edi now points to the beginning of the string - move it into eax
+    mov ecx, [ebp-8]  ; ebp-8 contains the length - move it into ecx
+
+    leave             ; Clean up our stack
+    ret
+write:
+    push ebp
+    mov ebp, esp
+    sub esp, 64     ; Allocate space for local variables and shadow space
+
+    ; Store our message and its length in local variables
+    mov [ebp - 8], ecx
+    mov [ebp - 12], edx
+    
+    ; Get the handle to StdOut
+    push STD_OUTPUT_HANDLE
+    call GetStdHandle
+
+    ; Write the message, passing the local variable values to the WinAPI
+    push 0
+    push empty
+    push dword[ebp - 12]
+    push dword[ebp - 8]
+    push eax
+    call WriteFile
+    push 22
+    call ExitProcess
+    
+    add esp, 20     ; Deallocate the parameters pushed on the stack
+
+    mov esp, ebp
+    pop ebp
+    ret
 
 _main:
     ;sub esp, 8
@@ -183,23 +197,49 @@ _main:
     call GetStdHandle
     mov [outHandle], eax
 
-    push 0
-    sub esp, 32
-    lea eax, [esp-32]
-    push eax
-    push 7
-    push ClassName
-    push dword [outHandle]
-    call WriteConsoleA 
-    push eax
-    call ExitProcess 
+; Write the message, passing the local
+    ; variable values to the WinAPI
+
+     ; Put the number in rdi
+    sub esp,0x28
+    mov ecx,[number]
+    call itoa
+   
+    ; The order of the two below instructions is important. RCX
+    ; contains the length of the string returned from itoa, but
+    ; its also a requirement that the first argument to write
+    ; be passed via rcx. So we need to move rcx in to rdx before
+    ; we overwrite rcx with rax.
+    mov edx,ecx
+    lea ecx,[eax]
+
+    call write
+    
+    
 
 messloop:
     
+    ;sub esp, 16
+    ;push dword[esp-16]
+    
+    ;call GetCursorPos 
+; print string
+;    push 0
+;    sub esp, 32
+;    lea eax, [esp-32]
+;    push eax
+;    mov ecx, string
+;    call StringLength
+;    push eax
+;    push string
+;    push dword [outHandle]
+;    call WriteConsoleA 
+;    mov esp, ebp
+;----------------------
+  
+  
 
-
-
-	push PM_REMOVE
+    push PM_REMOVE
 	push 0
 	push 0
 	push 0
@@ -256,16 +296,18 @@ Ldefault:
 	ret
 
 section .data  ; initialized and constant data 
-    number: dd 22
-    number2: dd 5
     Windowclassname db "MyClass", 0
     WindowName  db "Basic Window 64", 0
     ClassName   db "Window", 0
+    string db "Hello, Ilia!",0
 
     ;equ The equ directive can be used to define a symbol. Symbols are named
     ;constants that can be used in the assembly program
     WINDOW_WIDTH equ 640 
     WINDOW_HEIGHT equ 480
+    crlf db 10, 13, 0 ; Newline and carriage return
+    number		dd 1234567890
+
 message:
     db  '%i', 10, 0
 section .bss
@@ -275,3 +317,6 @@ section .bss
      MessageBuffer resb 28
      OurWindowclass resb 48
      WindowHandle resb 4
+    numBuffer resb 11 ; Buffer for the number as a string (up to 10 digits + null terminator)
+    empty resb 1
+      numbuf resb 10
