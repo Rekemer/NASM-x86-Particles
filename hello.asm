@@ -127,6 +127,7 @@ write:
     mov esp, ebp
     pop ebp
     ret
+printNumber:
 
 _main:
     ;sub esp, 8
@@ -197,18 +198,22 @@ _main:
     mov [outHandle], eax
 
 
+    mov esp,ebp
 
-    sub esp, 8
-    push dword[esp-8]
+    sub esp, 8                              ; allocate memory for POINT
+    mov dword ebx, esp
+    push ebx        
     call GetCursorPos
-    push eax
-    call ExitProcess
+    mov eax, [esp]
+    mov dword[cursorPos], eax
+    mov eax, [esp+4]
+    mov dword[cursorPos+4], eax
 ; Write the message, passing the local
     ; variable values to the WinAPI
 
      ; Put the number in rdi
    ; sub esp,0x28
-    mov ecx,[number]
+    mov ecx,[cursorPos]
     call itoa
    
     ;ecx is length and eax is begin address of content
@@ -224,7 +229,7 @@ _main:
     call write
 
 
-    mov ecx,[number]
+    mov ecx,[cursorPos+4]
     call itoa
    
     ; The order of the two below instructions is important. RCX
@@ -238,7 +243,8 @@ _main:
     call write
     
   ;  add esp,0x28
-    
+    push 22
+    call ExitProcess
 
 messloop:
     
@@ -342,4 +348,5 @@ section .bss
      WindowHandle resb 4
     numBuffer resb 12 ; Buffer for the number as a string (up to 10 digits + null terminator)
     empty resb 1
-      numbuf resb 11
+    numbuf resb 11
+    cursorPos resb 8
