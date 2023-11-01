@@ -120,8 +120,7 @@ write:
     push dword[ebp - 8]
     push eax
     call WriteFile
-    push 22
-    call ExitProcess
+    
     
     add esp, 20     ; Deallocate the parameters pushed on the stack
 
@@ -197,11 +196,34 @@ _main:
     call GetStdHandle
     mov [outHandle], eax
 
+
+
+    sub esp, 8
+    push dword[esp-8]
+    call GetCursorPos
+    push eax
+    call ExitProcess
 ; Write the message, passing the local
     ; variable values to the WinAPI
 
      ; Put the number in rdi
-    sub esp,0x28
+   ; sub esp,0x28
+    mov ecx,[number]
+    call itoa
+   
+    ;ecx is length and eax is begin address of content
+    mov edx,ecx
+    lea ecx,[eax]
+
+    call write
+
+
+    mov edx,3
+    lea ecx,[newLine]
+
+    call write
+
+
     mov ecx,[number]
     call itoa
    
@@ -215,6 +237,7 @@ _main:
 
     call write
     
+  ;  add esp,0x28
     
 
 messloop:
@@ -300,7 +323,7 @@ section .data  ; initialized and constant data
     WindowName  db "Basic Window 64", 0
     ClassName   db "Window", 0
     string db "Hello, Ilia!",0
-
+    newLine db 13,10,0
     ;equ The equ directive can be used to define a symbol. Symbols are named
     ;constants that can be used in the assembly program
     WINDOW_WIDTH equ 640 
@@ -317,6 +340,6 @@ section .bss
      MessageBuffer resb 28
      OurWindowclass resb 48
      WindowHandle resb 4
-    numBuffer resb 11 ; Buffer for the number as a string (up to 10 digits + null terminator)
+    numBuffer resb 12 ; Buffer for the number as a string (up to 10 digits + null terminator)
     empty resb 1
-      numbuf resb 10
+      numbuf resb 11
