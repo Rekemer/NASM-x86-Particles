@@ -37,6 +37,8 @@
     extern GetStdHandle 
     extern GetCursorPos 
     extern WriteFile 
+    extern ScreenToClient 
+
     
     ; import AllocConsole kernel32.dll
     ; import GetModuleHandleA kernel32.dll
@@ -127,8 +129,23 @@ write:
     mov esp, ebp
     pop ebp
     ret
+; eax is a number
 printNumber:
-
+   
+    call itoa
+   
+    ;ecx is length and eax is begin address of content
+    
+    ; The order of the two below instructions is important. RCX
+    ; contains the length of the string returned from itoa, but
+    ; its also a requirement that the first argument to write
+    ; be passed via rcx. So we need to move rcx in to rdx before
+    ; we overwrite rcx with rax.
+    
+    mov edx,ecx
+    lea ecx,[eax]
+    call write
+    ret
 _main:
     ;sub esp, 8
     ;sub esp, 32
@@ -200,51 +217,17 @@ _main:
 
     mov esp,ebp
 
-    sub esp, 8                              ; allocate memory for POINT
-    mov dword ebx, esp
-    push ebx        
-    call GetCursorPos
-    mov eax, [esp]
-    mov dword[cursorPos], eax
-    mov eax, [esp+4]
-    mov dword[cursorPos+4], eax
+    
 ; Write the message, passing the local
     ; variable values to the WinAPI
 
      ; Put the number in rdi
    ; sub esp,0x28
-    mov ecx,[cursorPos]
-    call itoa
    
-    ;ecx is length and eax is begin address of content
-    mov edx,ecx
-    lea ecx,[eax]
-
-    call write
-
-
-    mov edx,3
-    lea ecx,[newLine]
-
-    call write
-
-
-    mov ecx,[cursorPos+4]
-    call itoa
-   
-    ; The order of the two below instructions is important. RCX
-    ; contains the length of the string returned from itoa, but
-    ; its also a requirement that the first argument to write
-    ; be passed via rcx. So we need to move rcx in to rdx before
-    ; we overwrite rcx with rax.
-    mov edx,ecx
-    lea ecx,[eax]
-
-    call write
+    
     
   ;  add esp,0x28
-    push 22
-    call ExitProcess
+    
 
 messloop:
     
@@ -266,6 +249,38 @@ messloop:
 ;    mov esp, ebp
 ;----------------------
   
+    sub esp, 8                              ; allocate memory for POINT
+    mov dword ebx, esp
+    push ebx        
+    call GetCursorPos
+    mov eax, [esp]
+    mov dword[cursorPos], eax
+    mov eax, [esp+4]
+    mov dword[cursorPos+4], eax
+    mov esp,ebp
+
+    push cursorPos
+    push dword [WindowHandle]
+    call ScreenToClient
+    ;push eax
+    ;call ExitProcess
+
+    mov ecx,[cursorPos]
+     call printNumber
+
+    mov edx,3
+    lea ecx,[newLine]
+
+    call write
+
+   mov ecx,[cursorPos+4]
+    call printNumber
+
+    
+     mov edx,3
+    lea ecx,[newLine]
+
+    call write
   
 
     push PM_REMOVE
