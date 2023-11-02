@@ -38,6 +38,8 @@
     extern GetCursorPos 
     extern WriteFile 
     extern ScreenToClient 
+    extern SetPixel 
+    extern GetDC 
 
     
     ; import AllocConsole kernel32.dll
@@ -265,23 +267,32 @@ messloop:
     ;push eax
     ;call ExitProcess
 
-    mov ecx,[cursorPos]
-     call printNumber
+   ; mov ecx,[cursorPos]
+    ; call printNumber
 
-    mov edx,3
-    lea ecx,[newLine]
 
-    call write
-
-   mov ecx,[cursorPos+4]
-    call printNumber
+  ; mov ecx,[cursorPos+4]
+    ;call printNumber
 
     
      mov edx,3
     lea ecx,[newLine]
 
     call write
-  
+
+    mov esp,ebp
+    push dword [WindowHandle]
+    call GetDC
+    mov ebx, [cursorPos]
+    push 0xFF0000
+    push dword [cursorPos+4]
+    push dword [cursorPos]
+    push eax
+    call SetPixel
+    
+    
+   
+
 
     push PM_REMOVE
 	push 0
