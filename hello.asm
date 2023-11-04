@@ -105,6 +105,7 @@ itoa:
     leave             ; Clean up our stack
     ret
 write:
+pushad
     push ebp
     mov ebp, esp
     sub esp, 64     ; Allocate space for local variables and shadow space
@@ -130,10 +131,12 @@ write:
 
     mov esp, ebp
     pop ebp
+    popad
     ret
 ; eax is a number
 printNumber:
    
+   pushad
     call itoa
    
     ;ecx is length and eax is begin address of content
@@ -147,6 +150,7 @@ printNumber:
     mov edx,ecx
     lea ecx,[eax]
     call write
+    popad
     ret
 ; 1 - size
 ; 2 - posX
@@ -163,7 +167,7 @@ SetColorOfArea:
     neg eax
     mov [esp], eax ; begin of iterationX size
     mov dword[esp+12], eax ; begin of iterationY size
-  
+   
      
 
     mov ebx, [ebp+12]
@@ -179,13 +183,15 @@ loop:
    
 
     
-    mov edx,3
-    lea ecx,[newLine]
-
-    call write
+;mov edx,3
+;lea ecx,[newLine]
+;
+;call write
 
     mov ebx, [cursorPos]
     mov ecx, [cursorPos+4]
+    
+   
 
     
  
@@ -195,16 +201,22 @@ loop:
     
 loopY:
     
+ 
+
+   
+    mov ecx,[cursorPos+4]
+    add ecx, [esp+12]
+    
    ;mov edx,3
    ;lea ecx,[newLine]
 
-   ;call write
+   ; call write
 
-   
-    
-    add ecx, [esp+12]
+   ;mov ecx , [esp+16]
+   ;call printNumber
 
-;    call printNumber
+     
+
 
     push 0xFF0000
     push ecx  ; y pos
@@ -213,7 +225,9 @@ loopY:
     call SetPixel
 
     inc dword[esp+12]
+   
     inc dword[esp+16]
+   
     mov eax, [esp+16]
     cmp eax, [ebp+16]
     je endLoopX
@@ -223,6 +237,7 @@ loopY:
 endLoopX: 
     mov eax, [esp+8]
     mov dword[esp+16],0
+    mov dword[esp+12],-12
     inc dword[esp] ; increment x Size
     inc dword [esp+8] ; increment i
     mov eax, [esp+8]
@@ -350,11 +365,13 @@ messloop:
     mov dword[cursorPos], eax
     mov eax, [esp+4]
     mov dword[cursorPos+4], eax
+    
     mov esp,ebp
 
-    push cursorPos
-    push dword [WindowHandle]
-    call ScreenToClient
+   push cursorPos
+   push dword [WindowHandle]
+   call ScreenToClient
+     
     ;push eax
     ;call ExitProcess
 
@@ -371,7 +388,7 @@ messloop:
 
     call write
 
-    push 6 
+    push 24 
     push dword [cursorPos]
     push dword [cursorPos+4]
     call SetColorOfArea
@@ -380,7 +397,6 @@ messloop:
   ;call ExitProcess
     
    
-
 
     push PM_REMOVE
 	push 0
