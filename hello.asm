@@ -148,6 +148,94 @@ printNumber:
     lea ecx,[eax]
     call write
     ret
+; 1 - size
+; 2 - posX
+; 3 - posY
+; 4 - color
+SetColorOfArea:
+    push ebp
+    mov ebp,esp
+
+    sub esp, 20
+    mov eax, [ebp+16]
+    shr eax, 1
+    mov [esp+4],eax  ; total size
+    neg eax
+    mov [esp], eax ; begin of iterationX size
+    mov dword[esp+12], eax ; begin of iterationY size
+  
+     
+
+    mov ebx, [ebp+12]
+    mov dword[esp+8], 0 ; iteratorX
+    mov dword[esp+16], 0 ; iteratorY
+
+    
+   
+loop:
+    
+    
+
+   
+
+    
+    mov edx,3
+    lea ecx,[newLine]
+
+    call write
+
+    mov ebx, [cursorPos]
+    mov ecx, [cursorPos+4]
+
+    
+ 
+   
+    inc eax
+    add ebx, [esp] ; new x pos
+    
+loopY:
+    
+   ;mov edx,3
+   ;lea ecx,[newLine]
+
+   ;call write
+
+   
+    
+    add ecx, [esp+12]
+
+;    call printNumber
+
+    push 0xFF0000
+    push ecx  ; y pos
+    push ebx ; x pos
+    push dword[DeviceContext]
+    call SetPixel
+
+    inc dword[esp+12]
+    inc dword[esp+16]
+    mov eax, [esp+16]
+    cmp eax, [ebp+16]
+    je endLoopX
+    jmp loopY
+
+
+endLoopX: 
+    mov eax, [esp+8]
+    mov dword[esp+16],0
+    inc dword[esp] ; increment x Size
+    inc dword [esp+8] ; increment i
+    mov eax, [esp+8]
+    cmp eax, [ebp+16]
+    je end
+    jmp loop
+
+
+end:
+    mov esp, ebp
+    pop ebp
+    ret
+
 _main:
     ;sub esp, 8
     ;sub esp, 32
@@ -216,6 +304,9 @@ _main:
     call GetStdHandle
     mov [outHandle], eax
 
+    push dword [WindowHandle]
+    call GetDC
+    mov [DeviceContext], eax
 
     mov esp,ebp
 
@@ -280,16 +371,13 @@ messloop:
 
     call write
 
-    mov esp,ebp
-    push dword [WindowHandle]
-    call GetDC
-    mov ebx, [cursorPos]
-    push 0xFF0000
-    push dword [cursorPos+4]
+    push 6 
     push dword [cursorPos]
-    push eax
-    call SetPixel
+    push dword [cursorPos+4]
+    call SetColorOfArea
     
+  ;push 22
+  ;call ExitProcess
     
    
 
@@ -314,7 +402,8 @@ messloop:
     
     push MessageBuffer
 	call DispatchMessageA
-    
+   
+
 nextloop:
     jmp near messloop
 
@@ -372,6 +461,7 @@ section .bss
      MessageBuffer resb 28
      OurWindowclass resb 48
      WindowHandle resb 4
+     DeviceContext resb 4
     numBuffer resb 12 ; Buffer for the number as a string (up to 10 digits + null terminator)
     empty resb 1
     numbuf resb 11
