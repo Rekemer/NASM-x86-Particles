@@ -31,7 +31,6 @@
     extern PeekMessageA
     extern ShowWindow
     extern TranslateMessage
-    extern UpdateWindow
     extern AllocConsole 
     extern WriteConsoleA
     extern GetStdHandle 
@@ -40,7 +39,17 @@
     extern ScreenToClient 
     extern SetPixel 
     extern GetDC 
-
+    extern SwapBuffers 
+    extern FillRect 
+    extern CreateSolidBrush 
+    extern GetClientRect 
+    extern UpdateWindow 
+    extern RedrawWindow 
+    extern BeginPaint 
+    extern EndPaint 
+    extern SetTimer 
+    extern InvalidateRect 
+    extern DeleteObject 
     
     ; import AllocConsole kernel32.dll
     ; import GetModuleHandleA kernel32.dll
@@ -134,9 +143,15 @@ pushad
     popad
     ret
 ; eax is a number
+printNewLine:
+
+    mov edx,3
+    lea ecx,[newLine]
+    call write
+    ret  
 printNumber:
    
-   pushad
+    pushad
     call itoa
    
     ;ecx is length and eax is begin address of content
@@ -152,6 +167,7 @@ printNumber:
     call write
     popad
     ret
+; 0 - color
 ; 1 - size
 ; 2 - posX
 ; 3 - posY
@@ -177,25 +193,10 @@ SetColorOfArea:
     
    
 loop:
-    
-    
 
-   
-
-    
-;mov edx,3
-;lea ecx,[newLine]
-;
-;call write
-
-    mov ebx, [cursorPos]
+    mov ebx, [ebp+12]
     mov ecx, [cursorPos+4]
     
-   
-
-    
- 
-   
     inc eax
     add ebx, [esp] ; new x pos
     
@@ -204,21 +205,10 @@ loopY:
  
 
    
-    mov ecx,[cursorPos+4]
+    mov ecx,[ebp+8]
     add ecx, [esp+12]
     
-   ;mov edx,3
-   ;lea ecx,[newLine]
-
-   ; call write
-
-   ;mov ecx , [esp+16]
-   ;call printNumber
-
-     
-
-
-    push 0xFF0000
+    push dword[ebp+20]
     push ecx  ; y pos
     push ebx ; x pos
     push dword[DeviceContext]
@@ -323,39 +313,27 @@ _main:
     call GetDC
     mov [DeviceContext], eax
 
+     ; Create a solid brush for the clear color
+    push    0xff0000
+    call    CreateSolidBrush
+    mov dword[windowBrush],eax
+
+
+
+
+    push windowRect
+    push dword[WindowHandle]
+    call GetClientRect
+
+
+    call timer
     mov esp,ebp
 
-    
-; Write the message, passing the local
-    ; variable values to the WinAPI
-
-     ; Put the number in rdi
-   ; sub esp,0x28
-   
-    
-    
-  ;  add esp,0x28
     
 
 messloop:
     
-    ;sub esp, 16
-    ;push dword[esp-16]
-    
-    ;call GetCursorPos 
-; print string
-;    push 0
-;    sub esp, 32
-;    lea eax, [esp-32]
-;    push eax
-;    mov ecx, string
-;    call StringLength
-;    push eax
-;    push string
-;    push dword [outHandle]
-;    call WriteConsoleA 
-;    mov esp, ebp
-;----------------------
+
   
     sub esp, 8                              ; allocate memory for POINT
     mov dword ebx, esp
@@ -368,36 +346,11 @@ messloop:
     
     mov esp,ebp
 
-   push cursorPos
-   push dword [WindowHandle]
-   call ScreenToClient
+    push cursorPos
+    push dword [WindowHandle]
+    call ScreenToClient
      
-    ;push eax
-    ;call ExitProcess
-
-   ; mov ecx,[cursorPos]
-    ; call printNumber
-
-
-  ; mov ecx,[cursorPos+4]
-    ;call printNumber
-
     
-     mov edx,3
-    lea ecx,[newLine]
-
-    call write
-
-    push 24 
-    push dword [cursorPos]
-    push dword [cursorPos+4]
-    call SetColorOfArea
-    
-  ;push 22
-  ;call ExitProcess
-    
-   
-
     push PM_REMOVE
 	push 0
 	push 0
@@ -418,7 +371,13 @@ messloop:
     
     push MessageBuffer
 	call DispatchMessageA
-   
+    
+    ; push  RDW_ERASE | RDW_INTERNALPAINT
+    ; push  0
+    ; push  0
+    ; push  dword[WindowHandle]
+    ; call RedrawWindow
+    
 
 nextloop:
     jmp near messloop
@@ -434,7 +393,7 @@ WindowProc:
     push ebp
     mov ebp, esp
     cmp dword[ebp+12], WM_CLOSE
-    jne Ldefault
+    jne otherProcedures
     push 0 
     call PostQuitMessage
     
@@ -444,13 +403,108 @@ WindowProc:
     ; pop ebp
     ; ret
 
-Ldefault:
+resize:
+    push windowRect
+    push dword[WindowHandle]
+    call GetClientRect
+    jmp defaultProc
+
+;using eax as handle to brush
+;using ebx as handle to device context
+;0 - radius
+;1 - position x
+;2 - position y
+drawQuad:
+    push ebp
+    mov ebp,esp
+    ; right
+    ; bottom
+    ; left
+    ; top
+    
+    mov ecx, [ebp+12]
+    add ecx, [ebp+16]
+    push ecx 
+    mov ecx, [ebp+8]
+    add ecx, [ebp+16]
+    push ecx  
+    mov ecx, [ebp+12]
+    sub ecx, [ebp+16]
+    push ecx  
+    mov ecx, [ebp+8]
+    sub ecx, [ebp+16]
+    push ecx   
+
+
+    push eax
+
+    lea  edx, [esp+4]
+    push edx  
+    
+    push  ebx
+    call   [FillRect]
+    
+    mov esp,ebp
+    pop ebp
+    ret
+draw:
+    sub esp,4
+    push paintStruct
+    push dword[WindowHandle]
+    call BeginPaint
+    mov ebx,eax
+    push  dword[windowBrush] 
+    lea dword edx, [paintStruct+8]
+    push edx  
+    push  eax
+    call   [FillRect]
+    push    0xffffff
+    call    CreateSolidBrush
+    push 5
+    push dword[cursorPos+4]
+    push dword[cursorPos]
+    call drawQuad
+
+    push eax
+    call DeleteObject
+
+    lea dword edx, [paintStruct]
+    push edx
+    push dword[WindowHandle]
+    call EndPaint
+
+
+    jmp defaultProc
+
+timer:
+    push 0
+    push 20
+    push 1
+    push dword[WindowHandle]
+    call SetTimer
+    ret
+invalidate:
+    push 0
+    push 0
+    push dword[WindowHandle]
+    call InvalidateRect
+    jmp defaultProc
+otherProcedures:
+    cmp dword[ebp+12], WM_SIZE
+    je resize
+    cmp dword[ebp+12], WM_TIMER
+    je invalidate
+    cmp dword[ebp+12], WM_PAINT
+    je draw
+     
+
+defaultProc:
 	push dword[ebp+20]	; LPARAM
     push dword[ebp+16]	; WPARAM
     push dword[ebp+12]	; Msg
     push dword[ebp+8]	; hWnd
 	call DefWindowProcA
-
+    
     mov esp, ebp
     pop ebp
 	ret
@@ -467,7 +521,7 @@ section .data  ; initialized and constant data
     WINDOW_HEIGHT equ 480
     crlf db 10, 13, 0 ; Newline and carriage return
     number		dd 1234567890
-
+ 
 message:
     db  '%i', 10, 0
 section .bss
@@ -482,3 +536,6 @@ section .bss
     empty resb 1
     numbuf resb 11
     cursorPos resb 8
+    windowRect resb 16
+    windowBrush resb 4
+    paintStruct resb 64
