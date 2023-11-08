@@ -9,10 +9,12 @@ int sum (int a, int b)
 }
 int a = 2;
 int b = 4;
-A k;
+float k = 1;
 int main()
 {
-    k.number = 22;
+    a = 4;
+    k = (float)a;
+    printf("%f",k);
     //sum (a,b);
     //printf("%i",2);
     return 0;

@@ -241,6 +241,38 @@ end:
     pop ebp
     ret
 
+
+
+lerp:
+push ebp
+mov ebp,esp
+%define a dword[ebp+8]
+%define b dword[ebp+12]
+%define t dword[ebp+16]
+sub esp,4
+%define res dword[esp]
+fild b
+fild a
+fsub
+
+
+fld t
+fmul 
+
+
+fild a
+fadd 
+
+fist res
+
+
+mov eax, res
+
+
+mov esp,ebp
+pop ebp
+ret
+
 _main:
     ;sub esp, 8
     ;sub esp, 32
@@ -327,7 +359,23 @@ _main:
 
 
     call timer
+
+   ;movl	$4, _a
+	;movl	_a, %eax
+	;movl	%eax, 28(%esp)
+	;fildl	28(%esp)
+
     mov esp,ebp
+    
+    push 0x3f000000 
+    push 200 
+    push 50
+    call lerp
+    ; 0x3f000000 0.5
+    ;0x4048f5c3  pi
+    push eax
+    call ExitProcess
+    
 
     
 
@@ -521,7 +569,8 @@ section .data  ; initialized and constant data
     WINDOW_HEIGHT equ 480
     crlf db 10, 13, 0 ; Newline and carriage return
     number		dd 1234567890
- 
+    floatNumber dd 2.302
+    intNumber dd 42
 message:
     db  '%i', 10, 0
 section .bss
