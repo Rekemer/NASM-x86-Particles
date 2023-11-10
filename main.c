@@ -1,21 +1,20 @@
 #include"stdio.h"
-typedef struct 
-{
-    int number;
-} A;
-int sum (int a, int b)
-{
-    return a + b;
+#include <math.h>
+
+__declspec(dllexport) double mySin(double angle) {
+    return sin(angle);
 }
-int a = 2;
-int b = 4;
-float k = 1;
-int main()
-{
-    a = 4;
-    k = (float)a;
-    printf("%f",k);
-    //sum (a,b);
-    //printf("%i",2);
-    return 0;
+__declspec(dllexport) int  printFloat(float number) {
+    printf("%f\n",number);
+    return 201;
+}
+__declspec(dllexport) float random (int x, int y) {
+    x*= 12.9898;
+    y*= 78.233;
+    float sinArgument = x*x + y*y;
+    float sinFunc = sin(sinArgument)*43758.5453123;
+    int castedSin = floor(sinFunc);
+    float res = sinFunc - castedSin;
+    res+=0.4;
+    return res;
 }

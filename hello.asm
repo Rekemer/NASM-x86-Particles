@@ -50,6 +50,9 @@
     extern SetTimer 
     extern InvalidateRect 
     extern DeleteObject 
+    extern mySin 
+    extern printFloat 
+    extern random 
     
     ; import AllocConsole kernel32.dll
     ; import GetModuleHandleA kernel32.dll
@@ -274,6 +277,7 @@ pop ebp
 ret
 
 _main:
+
     ;sub esp, 8
     ;sub esp, 32
     ;xor ecx,ecx
@@ -359,22 +363,36 @@ _main:
 
 
     call timer
-
+    
    ;movl	$4, _a
 	;movl	_a, %eax
 	;movl	%eax, 28(%esp)
 	;fildl	28(%esp)
 
     mov esp,ebp
-    
-    push 0x3f000000 
-    push 200 
-    push 50
-    call lerp
+   
+   ;push 0x3f000000 
+   ;push 200 
+   ;push 50
+   ;call lerp
     ; 0x3f000000 0.5
     ;0x4048f5c3  pi
-    push eax
-    call ExitProcess
+    ;FLD dword[floatNumber]
+    push  1
+    push  3
+    call random
+
+    ;FXCH ST1
+    sub esp,4
+    fst dword[esp]
+    push dword[esp]
+    call printFloat
+
+   
+    ; add esp,8
+   ; push 22
+    ;call ExitProcess
+  
     
 
     
@@ -445,11 +463,9 @@ WindowProc:
     push 0 
     call PostQuitMessage
     
-    push 22
-    call ExitProcess
-    ; mov esp, ebp
-    ; pop ebp
-    ; ret
+     mov esp, ebp
+     pop ebp
+     ret
 
 resize:
     push windowRect
@@ -506,7 +522,18 @@ draw:
     push edx  
     push  eax
     call   [FillRect]
-    push    0xffffff
+
+    sub esp,4
+    push dword[cursorPos+4]
+    push dword[cursorPos]
+    call random
+    fmul dword[floatNumber]
+    fst dword[esp]
+    
+    push dword[esp]
+    
+   ; push    0xffffff
+
     call    CreateSolidBrush
     push 5
     push dword[cursorPos+4]
