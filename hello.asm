@@ -52,6 +52,8 @@
     extern DeleteObject 
     extern mySin 
     extern printFloat 
+    extern printString 
+    extern printInteger 
     extern random 
     
     ; import AllocConsole kernel32.dll
@@ -378,24 +380,70 @@ _main:
     ; 0x3f000000 0.5
     ;0x4048f5c3  pi
     ;FLD dword[floatNumber]
-    push  1
-    push  3
-    call random
-
-    ;FXCH ST1
-    sub esp,4
-    fst dword[esp]
-    push dword[esp]
-    call printFloat
-
    
-    ; add esp,8
-   ; push 22
-    ;call ExitProcess
+    mov eax, 0 
+    sub esp,12
+    %define iterator dword[esp]
+    %define t dword[esp+4]
+    %define t1 dword[esp+8]
+    mov iterator,0
+initParticles:
+    
+
+    mov ebx, iterator
+    imul ebx, 16
+    %define offset dword[ebx]
+    %define index particles+ebx
+    %define xPos dword[index]
+    %define yPos dword[index+4]
+    %define xVel dword[index+8]
+    %define yVel dword[index+12]
+    
+    mov ecx,dword[cursorPos]
+    add ecx, iterator 
+    push ecx
+    add ecx, iterator 
+    push ecx
+    call random
+    add esp,8
+   ; push iterator
+    ;call printInteger
+    fstp t
+    
+    mov ecx,dword[cursorPos+4]
+    inc ecx
+    add ecx, iterator 
+    push ecx
+    add ecx, iterator 
+    push ecx
+    call random
+    add esp,8
+   ; push iterator
+    ;call printInteger
+    fstp t1
   
     
+    fld dword[maxVel]
+    fld t1 
+    fmul
+    fstp yVel
 
+    fld dword[maxVel]
+    fld t 
+    fmul
+    fstp xVel
+
+    push yVel
+    call printFloat
+    add esp,4
+    inc iterator
+    mov eax, iterator
+    cmp eax, [particleAmount]
+    je messloop
+    jmp initParticles
     
+
+   
 
 messloop:
     
@@ -478,6 +526,8 @@ resize:
 ;0 - radius
 ;1 - position x
 ;2 - position y
+;2 - device context
+;4 - brush
 drawQuad:
     push ebp
     mov ebp,esp
@@ -485,33 +535,43 @@ drawQuad:
     ; bottom
     ; left
     ; top
-    
-    mov ecx, [ebp+12]
-    add ecx, [ebp+16]
+    %define radius dword[ebp+24]
+    %define x dword[ebp+20]
+    %define y dword[ebp+16]
+    %define deviceContext dword[ebp+12]
+    %define brush dword[ebp+8]
+    mov ecx, x
+    add ecx,radius
     push ecx 
-    mov ecx, [ebp+8]
-    add ecx, [ebp+16]
+    mov ecx, y
+    add ecx, radius
     push ecx  
-    mov ecx, [ebp+12]
-    sub ecx, [ebp+16]
+    mov ecx, x
+    sub ecx, radius
     push ecx  
-    mov ecx, [ebp+8]
-    sub ecx, [ebp+16]
+    mov ecx, y
+    sub ecx, radius
     push ecx   
 
-
-    push eax
+    
+    push brush
 
     lea  edx, [esp+4]
     push edx  
     
-    push  ebx
+    push  deviceContext
     call   [FillRect]
-    
+   
+    ;push eax
+    ;call ExitProcess
+   
     mov esp,ebp
     pop ebp
     ret
 draw:
+
+
+
     sub esp,4
     push paintStruct
     push dword[WindowHandle]
@@ -530,19 +590,54 @@ draw:
     fmul dword[floatNumber]
     fst dword[esp]
     
-    push dword[esp]
+   
     
    ; push    0xffffff
-
+    sub esp,12
+    %define iterator dword[esp]
+    %define brush dword[esp+4]
+    %define deviceContext dword[esp+8]
+    mov iterator,0
+    mov deviceContext,ebx
+    mov ebx, iterator
+renderLoop:
+    ; imul ebx, 16
+    ; %define offset dword[ebx]
+    ; %define index particles+ebx
+    ; %define xPos dword[index]
+    ; %define yPos dword[index+4]
+    ; %define xVel dword[index+8]
+    ; %define yVel dword[index+12]
+     
+   
+    push 0x000000
     call    CreateSolidBrush
+    mov brush,eax
+
+  
+   
     push 5
     push dword[cursorPos+4]
     push dword[cursorPos]
+    push dword[esp+20]
+    push dword[esp+16]
     call drawQuad
-
-    push eax
+    add esp, 20
+   
+    push brush
     call DeleteObject
 
+    push iterator
+    call printInteger
+    
+    
+    inc iterator
+   
+    mov eax, iterator
+    cmp eax, [particleAmount]
+    je endRender
+    jmp renderLoop
+endRender:
     lea dword edx, [paintStruct]
     push edx
     push dword[WindowHandle]
@@ -598,6 +693,9 @@ section .data  ; initialized and constant data
     number		dd 1234567890
     floatNumber dd 2.302
     intNumber dd 42
+    particleAmount dd 20
+    maxVel dd 20.0
+    minVel dd 5
 message:
     db  '%i', 10, 0
 section .bss
@@ -615,3 +713,4 @@ section .bss
     windowRect resb 16
     windowBrush resb 4
     paintStruct resb 64
+    particles resb ((8+8)) *particleAmount
