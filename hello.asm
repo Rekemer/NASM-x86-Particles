@@ -147,6 +147,7 @@ pushad
     pop ebp
     popad
     ret
+
 ; eax is a number
 printNewLine:
 
@@ -380,25 +381,37 @@ _main:
     ; 0x3f000000 0.5
     ;0x4048f5c3  pi
     ;FLD dword[floatNumber]
-   
+  
     mov eax, 0 
     sub esp,12
     %define iterator dword[esp]
     %define t dword[esp+4]
     %define t1 dword[esp+8]
     mov iterator,0
+
+    sub esp, 8                              ; allocate memory for POINT
+    mov dword ebx, esp
+    push ebx        
+    call GetCursorPos
+    mov eax, [esp]
+    mov dword[cursorPos], eax
+    mov eax, [esp+4]
+    mov dword[cursorPos+4], eax
+    add esp,8
+
 initParticles:
     
 
     mov ebx, iterator
-    imul ebx, 16
+    imul ebx, particleSize
     %define offset dword[ebx]
     %define index particles+ebx
     %define xPos dword[index]
     %define yPos dword[index+4]
     %define xVel dword[index+8]
     %define yVel dword[index+12]
-    
+    %define time dword[index+16]
+  
     mov ecx,dword[cursorPos]
     add ecx, iterator 
     push ecx
@@ -406,8 +419,6 @@ initParticles:
     push ecx
     call random
     add esp,8
-   ; push iterator
-    ;call printInteger
     fstp t
     
     mov ecx,dword[cursorPos+4]
@@ -418,8 +429,7 @@ initParticles:
     push ecx
     call random
     add esp,8
-   ; push iterator
-    ;call printInteger
+    
     fstp t1
   
     
@@ -433,9 +443,30 @@ initParticles:
     fmul
     fstp xVel
 
-    push yVel
+    fld dword[maxTime]
+    fld t 
+    fld dword[float_one]
+    fadd 
+    fdiv dword[float_two]
+    fmul
+    fstp time
+    push time 
     call printFloat
     add esp,4
+    ;push 22
+    ;push xVel
+    ;call printFloat
+    ;add esp,4
+
+    mov eax,   dword[cursorPos]
+    mov xPos, eax
+    mov eax,   dword[cursorPos+4]
+    mov yPos, eax
+    
+   ; push  dword[cursorPos]
+    ;call printInteger
+    ;add esp,4
+    
     inc iterator
     mov eax, iterator
     cmp eax, [particleAmount]
@@ -447,7 +478,6 @@ initParticles:
 
 messloop:
     
-
   
     sub esp, 8                              ; allocate memory for POINT
     mov dword ebx, esp
@@ -569,9 +599,96 @@ drawQuad:
     pop ebp
     ret
 draw:
+    %define iterator dword[esp]
+    mov iterator, 0 
+    mov eax, 0
+updateParticles:
 
+    mov ebx, iterator
+    imul ebx, particleSize
+    %define offset dword[ebx]
+    %define index particles+ebx
+    %define xPos dword[index]
+    %define yPos dword[index+4]
+    %define xVel dword[index+8]
+    %define yVel dword[index+12]
+    %define time dword[index+16]
+    %define currentTime dword[index+20]
+    ; push xVel
+    ; call printFloat
+    ; add esp,4
+    ; call ExitProcess
+    fld currentTime
+    fld dword[deltaTime]
+    fadd
+    fstp currentTime
+    ;push currentTime
+    ;call printFloat
+    ;add esp,4
+    ;call printString
+    ;push time
+    ;call printFloat
+    ;add esp,4
+   fcomp time ; compare STO and y
+   fstsw ax ; move C bits into FLAGS
+   sahf
+   jb particleAlive ; if current <= time 
+   jmp particleDead
+particleDead:
 
+;push currentTime
+;call printFloat
+;add esp,4
+mov eax, dword[cursorPos+4]
+mov xPos, eax
+mov eax, dword[cursorPos]
+mov yPos, eax
+mov currentTime,0
+particleAlive:
 
+    fild xPos
+    fld dword[deltaTime]
+    fld xVel
+    fmul
+    fadd
+    fistp xPos
+
+    
+    
+    fild yPos
+    fld dword[deltaTime]
+    fld yVel
+    fmul
+    fadd
+    fistp yPos
+  
+   ;push  xPos
+   ;call printInteger
+   ;add esp,4
+   ;push  yPos
+   ;call printInteger
+   ;add esp,4
+    ; push  yPos
+    ; call printInteger
+    ; add esp,4
+    
+  ; push xVel
+  ;call printFloat
+  ;add esp,4
+  ;push xPos
+  ;call printInteger
+  ;add esp,4
+   ;
+   
+    ;call ExitProcess
+    ;call ExitProcess
+    inc iterator
+    mov eax, iterator 
+    cmp eax, [particleAmount]
+    je _draw
+    jmp updateParticles
+_draw:
+   ; call ExitProcess
     sub esp,4
     push paintStruct
     push dword[WindowHandle]
@@ -582,7 +699,7 @@ draw:
     push edx  
     push  eax
     call   [FillRect]
-
+    
     sub esp,4
     push dword[cursorPos+4]
     push dword[cursorPos]
@@ -599,15 +716,15 @@ draw:
     %define deviceContext dword[esp+8]
     mov iterator,0
     mov deviceContext,ebx
-    mov ebx, iterator
 renderLoop:
-    ; imul ebx, 16
-    ; %define offset dword[ebx]
-    ; %define index particles+ebx
-    ; %define xPos dword[index]
-    ; %define yPos dword[index+4]
-    ; %define xVel dword[index+8]
-    ; %define yVel dword[index+12]
+    mov ebx, iterator
+    imul ebx, particleSize
+    %define offset dword[ebx]
+    %define index particles+ebx
+    %define xPos dword[index]
+    %define yPos dword[index+4]
+    %define xVel dword[index+8]
+    %define yVel dword[index+12]
      
    
     push 0x000000
@@ -616,19 +733,26 @@ renderLoop:
 
   
    
+   
+;    push  xPos
+;    call printInteger
+;    add esp,4
+;    push  yPos
+;    call printInteger
+;    add esp,4
     push 5
-    push dword[cursorPos+4]
-    push dword[cursorPos]
-    push dword[esp+20]
-    push dword[esp+16]
+    push xPos
+    push yPos
+    push dword[esp+20] ; device context
+    push dword[esp+16] ; brush
     call drawQuad
     add esp, 20
    
     push brush
     call DeleteObject
 
-    push iterator
-    call printInteger
+    ;push iterator
+    ;call printInteger
     
     
     inc iterator
@@ -642,7 +766,8 @@ endRender:
     push edx
     push dword[WindowHandle]
     call EndPaint
-
+   ; push 22 
+   ; call ExitProcess
 
     jmp defaultProc
 
@@ -693,9 +818,14 @@ section .data  ; initialized and constant data
     number		dd 1234567890
     floatNumber dd 2.302
     intNumber dd 42
-    particleAmount dd 20
+    particleAmount dd 50
     maxVel dd 20.0
+    maxTime dd 2.0
     minVel dd 5
+    deltaTime dd 0.1
+    particleSize equ 24
+    float_one dd 1.0
+    float_two dd 2.0
 message:
     db  '%i', 10, 0
 section .bss
@@ -713,4 +843,4 @@ section .bss
     windowRect resb 16
     windowBrush resb 4
     paintStruct resb 64
-    particles resb ((8+8)) *particleAmount
+    particles resb (particleSize *particleAmount)
