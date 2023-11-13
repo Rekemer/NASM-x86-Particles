@@ -737,12 +737,12 @@ particleAlive:
     fstp st0
     
     
-   push  xPos
-   call printInteger
-   add esp,4
-   push  yPos
-   call printInteger
-   add esp,4
+  ;push  xPos
+  ;call printInteger
+  ;add esp,4
+  ;push  yPos
+  ;call printInteger
+  ;add esp,4
 ;    push  currentTime
 ;    call printFloat
 ;    add esp,4
@@ -768,7 +768,6 @@ particleAlive:
     jmp updateParticles
 _draw:
    ; call ExitProcess
-    sub esp,4
     push paintStruct
     push dword[WindowHandle]
     call BeginPaint
@@ -808,16 +807,9 @@ renderLoop:
     %define currentTime dword[index+20]
     %define startColor dword[index+24]
     %define finalColor dword[index+28]
-    sub esp,4
-
-    fld currentTime 
-    fld time
-    fdiv 
-    fstp dword[esp]
-
-    ;push time
-    ;call printFloat 
-    ;add esp,4
+    
+    
+    
     ;push currentTime
     ;call printFloat 
     ;add esp,4
@@ -825,18 +817,38 @@ renderLoop:
     ;call printFloat
     ;add esp,4
     ;call printString
+    ;call printString
+    ;push startColor
+    ;call printInteger
+    ;add esp,4 
+    ;push finalColor
+    ;call printInteger
+    ;add esp,4 
+    ;call printString
     
+
+    sub esp,4
+
+    fld currentTime 
+    fld time 
+    fdiv 
+    fmul dword[float_two]
+    fsub dword[float_one]
+
+    fstp dword[esp]
+    fstp st0
     push dword[esp]
-    push startColor
-    push finalColor
-    call lerp
-    add esp,12
+    call randomColor
     add esp,4
+
+
     
     
     push eax
     call    CreateSolidBrush
     mov edx,eax
+    add esp,4
+    
 
   
    
@@ -869,6 +881,7 @@ renderLoop:
     je endRender
     jmp renderLoop
 endRender:
+    mov esp,ebp
     lea dword edx, [paintStruct]
     push edx
     push dword[WindowHandle]
@@ -925,7 +938,7 @@ section .data  ; initialized and constant data
     number		dd 1234567890
     floatNumber dd 2.302
     intNumber dd 42
-    particleAmount dd 7
+    particleAmount dd 50
     maxVel dd 20.0
     maxTime dd 5.0
     minVel dd 5
