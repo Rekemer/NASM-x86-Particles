@@ -624,6 +624,7 @@ drawQuad:
     pop ebp
     ret
 draw:
+    mov esp,ebp
     %define iterator dword[esp]
     
     mov iterator, 0 
@@ -768,6 +769,7 @@ particleAlive:
     jmp updateParticles
 _draw:
    ; call ExitProcess
+   mov esp,ebp
     push paintStruct
     push dword[WindowHandle]
     call BeginPaint
@@ -841,19 +843,17 @@ renderLoop:
     call randomColor
     add esp,4
 
-
-    
     
     push eax
     call    CreateSolidBrush
-    mov edx,eax
+    mov dword[windowBrush1],eax
     add esp,4
     
 
   
    
    
-  ;push  xPos
+  ;push z xPos
   ;call printInteger
   ;add esp,4
   ;push  yPos
@@ -863,13 +863,17 @@ renderLoop:
     push xPos
     push yPos
     push dword[esp+20] ; device context
-    push edx ; brush
+    push dword[windowBrush1] ; brush
+    mov eax,edx
     call drawQuad
     add esp, 20
    
-    push edx
+    push dword[windowBrush1]
     call DeleteObject
-
+    push eax
+    call printInteger
+    add esp,4
+    ;call ExitProcess
     ;push iterator
     ;call printInteger
     
@@ -938,7 +942,7 @@ section .data  ; initialized and constant data
     number		dd 1234567890
     floatNumber dd 2.302
     intNumber dd 42
-    particleAmount dd 50
+    particleAmount dd 100
     maxVel dd 20.0
     maxTime dd 5.0
     minVel dd 5
@@ -964,5 +968,5 @@ section .bss
     windowBrush resb 4
     paintStruct resb 64
     exeTime resb 4
-    
+    windowBrush1 resb 4 
     particles resb (particleSize *particleAmount)
