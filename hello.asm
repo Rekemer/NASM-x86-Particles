@@ -55,6 +55,7 @@
     extern printString 
     extern printInteger 
     extern random 
+    extern randomColor 
     
     ; import AllocConsole kernel32.dll
     ; import GetModuleHandleA kernel32.dll
@@ -260,7 +261,12 @@ sub esp,4
 fild b
 fild a
 fsub
+fabs
+fist res
 
+;push res
+;call printInteger
+;add esp,4
 
 fld t
 fmul 
@@ -273,6 +279,7 @@ fist res
 
 
 mov eax, res
+ 
 
 
 mov esp,ebp
@@ -401,7 +408,7 @@ _main:
 
 initParticles:
     
-
+    mov dword[exeTime],0
     mov ebx, iterator
     imul ebx, particleSize
     %define offset dword[ebx]
@@ -412,6 +419,8 @@ initParticles:
     %define yVel dword[index+12]
     %define time dword[index+16]
     %define currentTime dword[index+20]
+    %define startColor dword[index+24]
+    %define finalColor dword[index+28]
   
     mov ecx,dword[cursorPos]
     add ecx, iterator 
@@ -451,22 +460,37 @@ initParticles:
     fdiv dword[float_two]
     fmul
     fstp time
-    push time 
-    call printFloat
-    add esp,4
-    ;push 22
-    ;push xVel
-    ;call printFloat
-    ;add esp,4
 
     mov eax,   dword[cursorPos]
     mov xPos, eax
     mov eax,   dword[cursorPos+4]
     mov yPos, eax
     mov currentTime , 0
-   ; push  dword[cursorPos]
-    ;call printInteger
-    ;add esp,4
+
+
+    push t
+    call randomColor
+    add esp,4
+    mov startColor,eax
+    
+   push t1
+   call randomColor
+   add esp,4
+   mov finalColor,eax
+   ; push t
+   ; call printFloat
+   ;add esp,4
+
+   ;push startColor
+   ;call printInteger
+   ;add esp,4
+   ;push eax
+   ;call printInteger
+   ;add esp,4
+
+   ; push finalColor
+   ;call printInteger
+   ;add esp,4
     
     inc iterator
     mov eax, iterator
@@ -479,7 +503,7 @@ initParticles:
 
 messloop:
     
-  
+    ;call ExitProcess
     sub esp, 8                              ; allocate memory for POINT
     mov dword ebx, esp
     push ebx        
@@ -601,9 +625,11 @@ drawQuad:
     ret
 draw:
     %define iterator dword[esp]
+    
     mov iterator, 0 
     mov eax, 0
 updateParticles:
+
 
     mov ebx, iterator
     imul ebx, particleSize
@@ -621,15 +647,22 @@ updateParticles:
     ; call ExitProcess
     fld currentTime
     fld dword[deltaTime]
-    fadd
-    fst currentTime
+    fadd st1
+    fstp currentTime
+
+    fild  dword[exeTime]
+    fld dword[float_one]
+    fadd st1
+    fistp  dword[exeTime]
+    fstp st0
     ;push currentTime
     ;call printFloat
     ;add esp,4
     ;call printString
-   ;push time
+   ;push currentTime
    ;call printFloat
    ;add esp,4
+   
    fcomp time ; compare STO and y
    fstsw ax ; move C bits into FLAGS
    sahf
@@ -637,14 +670,54 @@ updateParticles:
    jmp particleDead
 particleDead:
 
-push currentTime
-call printFloat
-add esp,4
+; push time
+; call printFloat
+; add esp,4
 mov eax, dword[cursorPos+4]
 mov xPos, eax
 mov eax, dword[cursorPos]
 mov yPos, eax
 mov currentTime,0
+sub esp,12
+%define t dword[esp]
+%define t1 dword[esp+4]
+%define seed dword[esp+8]
+
+
+
+ mov ecx,dword[cursorPos]
+    add ecx, dword[exeTime] 
+    push ecx
+    add ecx,  dword[exeTime] 
+    push ecx
+    call random
+    add esp,8
+    fstp t
+    
+    mov ecx,dword[cursorPos+4]
+    inc ecx
+    add ecx,  dword[exeTime] 
+    push ecx
+    add ecx,  dword[exeTime] 
+    push ecx
+    call random
+    add esp,8
+    
+    fstp t1
+  
+    
+    fld dword[maxVel]
+    fld t1 
+    fmul
+    fstp yVel
+    fstp st0
+    fld dword[maxVel]
+    fld t 
+    fmul
+    fstp xVel
+    fstp st0
+add esp,12
+
 particleAlive:
 
     fild xPos
@@ -661,7 +734,9 @@ particleAlive:
     fmul
     fadd
     fistp yPos
-  
+    fstp st0
+    
+    
    push  xPos
    call printInteger
    add esp,4
@@ -729,30 +804,58 @@ renderLoop:
     %define yPos dword[index+4]
     %define xVel dword[index+8]
     %define yVel dword[index+12]
-     
-   
-    push 0x000000
+    %define time dword[index+16]
+    %define currentTime dword[index+20]
+    %define startColor dword[index+24]
+    %define finalColor dword[index+28]
+    sub esp,4
+
+    fld currentTime 
+    fld time
+    fdiv 
+    fstp dword[esp]
+
+    ;push time
+    ;call printFloat 
+    ;add esp,4
+    ;push currentTime
+    ;call printFloat 
+    ;add esp,4
+    ;push dword[esp]
+    ;call printFloat
+    ;add esp,4
+    ;call printString
+    
+    push dword[esp]
+    push startColor
+    push finalColor
+    call lerp
+    add esp,12
+    add esp,4
+    
+    
+    push eax
     call    CreateSolidBrush
-    mov brush,eax
+    mov edx,eax
 
   
    
    
-;    push  xPos
-;    call printInteger
-;    add esp,4
-;    push  yPos
-;    call printInteger
-;    add esp,4
+  ;push  xPos
+  ;call printInteger
+  ;add esp,4
+  ;push  yPos
+  ;call printInteger
+  ;add esp,4
     push 5
     push xPos
     push yPos
     push dword[esp+20] ; device context
-    push dword[esp+16] ; brush
+    push edx ; brush
     call drawQuad
     add esp, 20
    
-    push brush
+    push edx
     call DeleteObject
 
     ;push iterator
@@ -822,12 +925,12 @@ section .data  ; initialized and constant data
     number		dd 1234567890
     floatNumber dd 2.302
     intNumber dd 42
-    particleAmount dd 20
+    particleAmount dd 7
     maxVel dd 20.0
-    maxTime dd 2.0
+    maxTime dd 5.0
     minVel dd 5
     deltaTime dd 0.1
-    particleSize equ 24
+    particleSize equ 32
     float_one dd 1.0
     float_two dd 2.0
 message:
@@ -847,4 +950,6 @@ section .bss
     windowRect resb 16
     windowBrush resb 4
     paintStruct resb 64
+    exeTime resb 4
+    
     particles resb (particleSize *particleAmount)
