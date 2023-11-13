@@ -411,6 +411,7 @@ initParticles:
     %define xVel dword[index+8]
     %define yVel dword[index+12]
     %define time dword[index+16]
+    %define currentTime dword[index+20]
   
     mov ecx,dword[cursorPos]
     add ecx, iterator 
@@ -462,7 +463,7 @@ initParticles:
     mov xPos, eax
     mov eax,   dword[cursorPos+4]
     mov yPos, eax
-    
+    mov currentTime , 0
    ; push  dword[cursorPos]
     ;call printInteger
     ;add esp,4
@@ -621,14 +622,14 @@ updateParticles:
     fld currentTime
     fld dword[deltaTime]
     fadd
-    fstp currentTime
+    fst currentTime
     ;push currentTime
     ;call printFloat
     ;add esp,4
     ;call printString
-    ;push time
-    ;call printFloat
-    ;add esp,4
+   ;push time
+   ;call printFloat
+   ;add esp,4
    fcomp time ; compare STO and y
    fstsw ax ; move C bits into FLAGS
    sahf
@@ -636,9 +637,9 @@ updateParticles:
    jmp particleDead
 particleDead:
 
-;push currentTime
-;call printFloat
-;add esp,4
+push currentTime
+call printFloat
+add esp,4
 mov eax, dword[cursorPos+4]
 mov xPos, eax
 mov eax, dword[cursorPos]
@@ -652,8 +653,7 @@ particleAlive:
     fmul
     fadd
     fistp xPos
-
-    
+    fstp st0
     
     fild yPos
     fld dword[deltaTime]
@@ -662,15 +662,19 @@ particleAlive:
     fadd
     fistp yPos
   
-   ;push  xPos
-   ;call printInteger
-   ;add esp,4
-   ;push  yPos
-   ;call printInteger
-   ;add esp,4
-    ; push  yPos
-    ; call printInteger
-    ; add esp,4
+   push  xPos
+   call printInteger
+   add esp,4
+   push  yPos
+   call printInteger
+   add esp,4
+;    push  currentTime
+;    call printFloat
+;    add esp,4
+;    call printString
+;    push  time
+;    call printFloat
+;    add esp,4
     
   ; push xVel
   ;call printFloat
@@ -818,7 +822,7 @@ section .data  ; initialized and constant data
     number		dd 1234567890
     floatNumber dd 2.302
     intNumber dd 42
-    particleAmount dd 50
+    particleAmount dd 20
     maxVel dd 20.0
     maxTime dd 2.0
     minVel dd 5
